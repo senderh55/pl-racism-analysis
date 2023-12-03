@@ -6,6 +6,8 @@ import { startScheduler } from "./services/scheduling.service";
 import { connectToDatabase } from "./services/database.service";
 import { rateLimit } from "express-rate-limit";
 import { logRequest } from "./middlewares/logging.middleware";
+import { initializeKeywords } from "./services/nlp.service";
+
 import cors from "cors";
 
 const limiter = rateLimit({
@@ -17,6 +19,7 @@ const limiter = rateLimit({
 dotenv.config();
 connectToDatabase();
 startScheduler();
+initializeKeywords();
 
 const app = express();
 app.use(cors());

@@ -10,8 +10,20 @@ const analyzer = new SentimentAnalyzer("English", PorterStemmer, "afinn");
 
 let keywords: string[] = [];
 
+export const loadKeywords = () => {
+  try {
+    const data = fs.readFileSync("./keywords.json", "utf8");
+    keywords = JSON.parse(data);
+    console.log("Keywords successfully loaded from file.");
+  } catch (error) {
+    console.error("Error loading keywords from file:", error);
+  }
+};
+
 export const setKeywords = (newKeywords: string[]) => {
   keywords = newKeywords;
+  fs.writeFileSync("./keywords.json", JSON.stringify(newKeywords));
+  console.log("Keywords saved to file.");
 };
 
 export const analyzeTextForRacism = (text: string): boolean => {
@@ -48,7 +60,7 @@ export const extractKeywordsFromArticles = (articles: any[]): string[] => {
   return sortedWords;
 };
 
-export const analyzeFetchedArticlesAndExtractKeywords = async (
+export const createDataset = async (
   query: string,
   fromDate: string,
   toDate: string
@@ -63,10 +75,6 @@ export const analyzeFetchedArticlesAndExtractKeywords = async (
     const extractedKeywords = extractKeywordsFromArticles(
       potentiallyRacistArticles
     );
-    // Save these keywords to a file or database for future use
-    fs.writeFileSync("./keywords.json", JSON.stringify(extractedKeywords));
-
-    // Set keywords for ongoing analysis
     setKeywords(extractedKeywords);
   } catch (error) {
     console.error("Error in analyzing fetched articles:", error);
@@ -78,7 +86,7 @@ export const analyzeFetchedArticles = async (
   query: string,
   fromDate: string,
   toDate: string
-): Promise<any[]> => {
+): Promise<string[]> => {
   try {
     const articles = await fetchNewsArticles(query, fromDate, toDate);
     return articles.filter((article) =>
@@ -87,5 +95,13 @@ export const analyzeFetchedArticles = async (
   } catch (error) {
     console.error("Error in analyzing fetched articles:", error);
     throw error;
+  }
+};
+
+export const initializeKeywords = async () => {
+  if (fs.existsSync("./keywords.json")) {
+    loadKeywords();
+  } else {
+    await createDataset("Premier League racism", "2023-11-03", "2023-12-02");
   }
 };
