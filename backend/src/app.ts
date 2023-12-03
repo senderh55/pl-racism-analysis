@@ -1,14 +1,14 @@
 import express from "express";
 
 import dotenv from "dotenv";
+import cors from "cors";
+
 import eventRoute from "./routes/event.route";
 import { startScheduler } from "./services/scheduling.service";
 import { connectToDatabase } from "./services/database.service";
 import { rateLimit } from "express-rate-limit";
 import { logRequest } from "./middlewares/logging.middleware";
 import { initializeKeywords } from "./services/nlp.service";
-
-import cors from "cors";
 
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute

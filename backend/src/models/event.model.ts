@@ -6,7 +6,6 @@ const eventSchema = new mongoose.Schema({
   source: String,
   sentimentScore: Number,
   date: Date,
-  isRacist: Boolean,
 });
 
 export const Event = mongoose.model("Event", eventSchema);

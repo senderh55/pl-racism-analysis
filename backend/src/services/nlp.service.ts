@@ -1,8 +1,8 @@
-// nlp.service.ts
 import natural from "natural";
 import fs from "fs";
-import stopwords from "stopword";
+import { removeStopwords, eng } from "stopword";
 import { fetchNewsArticles } from "./news.service";
+import { Event } from "../models/event.model";
 
 const { SentimentAnalyzer, PorterStemmer, WordTokenizer } = natural;
 const tokenizer = new WordTokenizer();
@@ -10,98 +10,84 @@ const analyzer = new SentimentAnalyzer("English", PorterStemmer, "afinn");
 
 let keywords: string[] = [];
 
-export const loadKeywords = () => {
-  try {
-    const data = fs.readFileSync("./keywords.json", "utf8");
-    keywords = JSON.parse(data);
-    console.log("Keywords successfully loaded from file.");
-  } catch (error) {
-    console.error("Error loading keywords from file:", error);
+const defaultRacismRelatedTerms = [
+  "racism",
+  "discrimination",
+  "bigotry",
+  "prejudice",
+  "bias",
+];
+
+export const loadKeywords = (): void => {
+  if (fs.existsSync("./keywords.json")) {
+    try {
+      const data = fs.readFileSync("./keywords.json", "utf8");
+      keywords = JSON.parse(data);
+      console.log("Keywords successfully loaded from file.");
+    } catch (error) {
+      console.error("Error loading keywords from file:", error);
+      keywords = [...defaultRacismRelatedTerms];
+    }
+  } else {
+    keywords = [...defaultRacismRelatedTerms];
   }
 };
 
-export const setKeywords = (newKeywords: string[]) => {
-  keywords = newKeywords;
+export const setKeywords = (newKeywords: string[]): void => {
+  keywords = [...newKeywords];
   fs.writeFileSync("./keywords.json", JSON.stringify(newKeywords));
   console.log("Keywords saved to file.");
 };
 
 export const analyzeTextForRacism = (text: string): boolean => {
-  const tokens = tokenizer.tokenize(text);
-  if (!tokens) {
-    return false;
-  }
+  const tokens = tokenizer.tokenize(text.toLowerCase()) || [];
+  console.log("Tokens:", tokens);
 
-  const sentimentScore = analyzer.getSentiment(tokens);
-  const containsKeywords = tokens.some((token) =>
-    keywords.includes(token.toLowerCase())
+  const filteredTokens = removeStopwords(tokens, eng);
+
+  const containsRacismKeywords = filteredTokens.some((token) =>
+    keywords.includes(token)
   );
-
-  return sentimentScore < 0 && containsKeywords;
-};
-
-export const extractKeywordsFromArticles = (articles: any[]): string[] => {
-  let wordFrequency: Record<string, number> = {};
-
-  articles.forEach((article) => {
-    const content = article.content || "";
-    const tokens = tokenizer.tokenize(content.toLowerCase());
-    const filteredTokens = stopwords.removeStopwords(tokens || []);
-
-    filteredTokens.forEach((token) => {
-      wordFrequency[token] = (wordFrequency[token] || 0) + 1;
-    });
-  });
-
-  const sortedWords = Object.entries(wordFrequency)
-    .sort((a, b) => b[1] - a[1])
-    .map((entry) => entry[0]);
-
-  return sortedWords;
-};
-
-export const createDataset = async (
-  query: string,
-  fromDate: string,
-  toDate: string
-): Promise<void> => {
-  try {
-    const articles = await fetchNewsArticles(query, fromDate, toDate);
-    const potentiallyRacistArticles = articles.filter((article) =>
-      analyzeTextForRacism(article.content || article.description || "")
-    );
-
-    // Extract keywords from the identified articles
-    const extractedKeywords = extractKeywordsFromArticles(
-      potentiallyRacistArticles
-    );
-    setKeywords(extractedKeywords);
-  } catch (error) {
-    console.error("Error in analyzing fetched articles:", error);
-    throw error;
-  }
+  const sentimentScore = analyzer.getSentiment(filteredTokens);
+  console.log("Sentiment score:", sentimentScore);
+  console.log("Contains racism keywords:", containsRacismKeywords);
+  // Example logic
+  return containsRacismKeywords && sentimentScore < 0;
 };
 
 export const analyzeFetchedArticles = async (
   query: string,
   fromDate: string,
   toDate: string
-): Promise<string[]> => {
+): Promise<void> => {
   try {
     const articles = await fetchNewsArticles(query, fromDate, toDate);
-    return articles.filter((article) =>
-      analyzeTextForRacism(article.content || article.description || "")
-    );
+
+    for (const article of articles) {
+      const content = article.content || article.description || "";
+      if (!content) continue; // Skip articles without content (e.g. images)
+      const isRacist = analyzeTextForRacism(content);
+      const tokens = tokenizer.tokenize(content.toLowerCase()) || [];
+      const sentimentScore = isRacist ? analyzer.getSentiment(tokens) : 0;
+
+      if (isRacist) {
+        const newEvent = new Event({
+          title: article.title,
+          content: content,
+          source: article.source.name,
+          sentimentScore: sentimentScore,
+          date: new Date(article.publishedAt),
+        });
+
+        await newEvent.save();
+        console.log(`Article titled "${article.title}" analyzed and saved.`);
+      }
+    }
   } catch (error) {
     console.error("Error in analyzing fetched articles:", error);
     throw error;
   }
 };
-
-export const initializeKeywords = async () => {
-  if (fs.existsSync("./keywords.json")) {
-    loadKeywords();
-  } else {
-    await createDataset("Premier League racism", "2023-11-03", "2023-12-02");
-  }
+export const initializeKeywords = (): void => {
+  loadKeywords();
 };

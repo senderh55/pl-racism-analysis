@@ -15,10 +15,9 @@ export const fetchNewsArticles = async (
         from: fromDate,
         to: toDate,
         apiKey: process.env.NEWS_API_KEY,
-        language: "en", // Assuming you want articles in English
+        language: "en",
       },
     });
-    console.log(response.data);
     return response.data.articles;
   } catch (error) {
     console.error("Error fetching news articles:", error);

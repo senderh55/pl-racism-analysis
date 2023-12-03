@@ -1,6 +1,6 @@
-const dotenv = require("dotenv");
 import mongoose from "mongoose";
 import RequestLogModel from "../models/requestlog.model";
+require("dotenv").config();
 
 const MONGO_URI = process.env.MONGO_URI || "your_default_mongo_uri";
 
