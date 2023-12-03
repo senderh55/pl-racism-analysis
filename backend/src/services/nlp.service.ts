@@ -9,27 +9,40 @@ const tokenizer = new WordTokenizer();
 const analyzer = new SentimentAnalyzer("English", PorterStemmer, "afinn");
 
 let keywords: string[] = [];
-
-const defaultRacismRelatedTerms = [
+const KEYWORDS_FILE_PATH = "./keywords.json";
+const DEFAULT_KEYWORDS = [
   "racism",
+  "racial",
   "discrimination",
   "bigotry",
   "prejudice",
   "bias",
+  "xenophobia",
+  "stereotype",
+  "inequality",
+  "hate speech",
+  "racial profiling",
+  "ethnic slur",
+  "hate crime",
+  "segregation",
+  "supremacy",
+  "nationalism",
+  "intolerance",
+  "anti-semitism",
 ];
 
 export const loadKeywords = (): void => {
-  if (fs.existsSync("./keywords.json")) {
+  if (fs.existsSync(KEYWORDS_FILE_PATH)) {
     try {
-      const data = fs.readFileSync("./keywords.json", "utf8");
+      const data = fs.readFileSync(KEYWORDS_FILE_PATH, "utf8");
       keywords = JSON.parse(data);
       console.log("Keywords successfully loaded from file.");
     } catch (error) {
       console.error("Error loading keywords from file:", error);
-      keywords = [...defaultRacismRelatedTerms];
+      keywords = [...KEYWORDS_FILE_PATH];
     }
   } else {
-    keywords = [...defaultRacismRelatedTerms];
+    keywords = [...KEYWORDS_FILE_PATH];
   }
 };
 
@@ -39,7 +52,13 @@ export const setKeywords = (newKeywords: string[]): void => {
   console.log("Keywords saved to file.");
 };
 
-export const analyzeTextForRacism = (text: string): boolean => {
+export const initializeKeywords = (): void => {
+  loadKeywords();
+};
+
+// FIX UNTIL HERE
+
+const analyzeTextForRacism = (text: string): boolean => {
   const tokens = tokenizer.tokenize(text.toLowerCase()) || [];
   console.log("Tokens:", tokens);
 
@@ -51,7 +70,7 @@ export const analyzeTextForRacism = (text: string): boolean => {
   const sentimentScore = analyzer.getSentiment(filteredTokens);
   console.log("Sentiment score:", sentimentScore);
   console.log("Contains racism keywords:", containsRacismKeywords);
-  // Example logic
+
   return containsRacismKeywords && sentimentScore < 0;
 };
 
@@ -71,12 +90,13 @@ export const analyzeFetchedArticles = async (
       const sentimentScore = isRacist ? analyzer.getSentiment(tokens) : 0;
 
       if (isRacist) {
+        const { title, source, url, publishedAt } = article;
         const newEvent = new Event({
-          title: article.title,
-          content: content,
-          source: article.source.name,
-          sentimentScore: sentimentScore,
-          date: new Date(article.publishedAt),
+          title,
+          source: source.name,
+          url,
+          sentimentScore,
+          date: new Date(publishedAt),
         });
 
         await newEvent.save();
@@ -87,7 +107,4 @@ export const analyzeFetchedArticles = async (
     console.error("Error in analyzing fetched articles:", error);
     throw error;
   }
-};
-export const initializeKeywords = (): void => {
-  loadKeywords();
 };
