@@ -1,4 +1,3 @@
-// File: src/__tests__/nlp.service.test.ts
 import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose from "mongoose";
 import { analyzeFetchedArticles } from "../src/services/nlp.service";
@@ -7,29 +6,12 @@ import { Event } from "../src/models/event.model";
 
 // Mock the newsService
 jest.mock("../src/services/news.service");
+
+// Define the type for the mocked fetchNewsArticles function
 type MockedFetchNewsArticles = jest.Mock<
   ReturnType<typeof newsService.fetchNewsArticles>,
   Parameters<typeof newsService.fetchNewsArticles>
 >;
-// Define the type for the mocked fetchNewsArticles function
-// Define the type for the mocked Event model
-type MockedEventModel = {
-  findOne: jest.Mock<any, any>;
-  save: jest.Mock<any, any>;
-  // Other mock methods or properties as needed
-};
-
-jest.mock("../src/models/event.model", () => {
-  const mockEventModel: MockedEventModel = {
-    findOne: jest.fn(),
-    save: jest.fn(),
-    // Other mock methods or properties as needed
-  };
-
-  return {
-    Event: mockEventModel,
-  };
-});
 
 let mongoServer: MongoMemoryServer;
 
@@ -66,7 +48,14 @@ describe("analyzeFetchedArticles", () => {
       newsService.fetchNewsArticles as MockedFetchNewsArticles
     ).mockResolvedValue(articles);
 
-    (Event.findOne as jest.Mock).mockResolvedValue(null);
+    const findOneMock = jest.fn();
+    const saveMock = jest.fn();
+
+    findOneMock.mockResolvedValue(null);
+
+    // Mock the Event model
+    jest.spyOn(Event, "findOne").mockImplementation(findOneMock);
+    jest.spyOn(Event.prototype, "save").mockImplementation(saveMock);
 
     await analyzeFetchedArticles("racism", "2023-11-07", "2023-12-10");
 
@@ -75,8 +64,8 @@ describe("analyzeFetchedArticles", () => {
       "2023-11-07",
       "2023-12-10"
     );
-    expect(Event.findOne).toHaveBeenCalledWith({ url: articles[0].url });
-    expect(new Event().save).toHaveBeenCalled();
+    expect(findOneMock).toHaveBeenCalledWith({ url: articles[0].url });
+    expect(saveMock).toHaveBeenCalled();
   });
 
   it("should not save an article if it already exists in the database", async () => {
@@ -94,13 +83,19 @@ describe("analyzeFetchedArticles", () => {
       newsService.fetchNewsArticles as MockedFetchNewsArticles
     ).mockResolvedValue(articles);
 
-    const { Event } = require("../src/models/event.model");
-    Event.findOne.mockResolvedValue(articles[0]);
+    const findOneMock = jest.fn();
+    const saveMock = jest.fn();
+
+    findOneMock.mockResolvedValue(articles[0]);
+
+    // Mock the Event model
+    jest.spyOn(Event, "findOne").mockImplementation(findOneMock);
+    jest.spyOn(Event.prototype, "save").mockImplementation(saveMock);
 
     await analyzeFetchedArticles("racism", "2023-11-07", "2023-12-10");
 
-    expect(Event.findOne).toHaveBeenCalledWith({ url: articles[0].url });
-    expect(new Event().save).not.toHaveBeenCalled();
+    expect(findOneMock).toHaveBeenCalledWith({ url: articles[0].url });
+    expect(saveMock).not.toHaveBeenCalled();
   });
 
   it("should handle errors during article analysis", async () => {
@@ -116,7 +111,7 @@ describe("analyzeFetchedArticles", () => {
       analyzeFetchedArticles("racism", "2023-11-11", "2023-11-11")
     ).rejects.toThrow(error);
 
-    expect(console.error).toHaveBeenCalledWith(
+    expect(consoleErrorMock).toHaveBeenCalledWith(
       "Error in analyzing fetched articles:",
       error
     );
