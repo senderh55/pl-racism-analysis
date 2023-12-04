@@ -1,12 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
-
-export interface IRequestLog extends Document {
-  endpoint: string;
-  method: string;
-  parameters: object;
-  requestBody: object;
-  timestamp: Date;
-}
+import mongoose, { Schema } from "mongoose";
 
 const requestLogSchema: Schema = new Schema({
   endpoint: { type: String, required: true },
@@ -15,5 +7,5 @@ const requestLogSchema: Schema = new Schema({
   requestBody: { type: Object, required: false },
   timestamp: { type: Date, default: Date.now },
 });
-
-export default mongoose.model<IRequestLog>("RequestLog", requestLogSchema);
+const RequestLogModel = mongoose.model("RequestLog", requestLogSchema);
+export default RequestLogModel;

@@ -1,4 +1,3 @@
-// news.service.ts
 import axios from "axios";
 
 const BASE_URL = "https://newsapi.org/v2/everything";
