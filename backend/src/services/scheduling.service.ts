@@ -8,8 +8,8 @@ export const startScheduler = async () => {
     try {
       // Simply call the function without expecting a return value
       await analyzeFetchedArticles(
-        "Racial Abuse in Premier League",
-        "2023-11-11",
+        "racism in the Premier League",
+        "2023-11-07",
         new Date().toISOString()
       );
 

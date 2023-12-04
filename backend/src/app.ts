@@ -8,7 +8,6 @@ import { startScheduler } from "./services/scheduling.service";
 import { connectToDatabase } from "./services/database.service";
 import { rateLimit } from "express-rate-limit";
 import { logRequest } from "./middlewares/logging.middleware";
-import { initializeKeywords } from "./services/nlp.service";
 
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
@@ -19,7 +18,6 @@ const limiter = rateLimit({
 dotenv.config();
 connectToDatabase();
 startScheduler();
-initializeKeywords();
 
 const app = express();
 app.use(cors());

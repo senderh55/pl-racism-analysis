@@ -4,11 +4,12 @@ import { removeStopwords, eng } from "stopword";
 import { fetchNewsArticles } from "./news.service";
 import { Event } from "../models/event.model";
 
+// Natural Language Processing Setup
 const { SentimentAnalyzer, PorterStemmer, WordTokenizer } = natural;
 const tokenizer = new WordTokenizer();
 const analyzer = new SentimentAnalyzer("English", PorterStemmer, "afinn");
 
-let keywords: string[] = [];
+// Keywords Management
 const KEYWORDS_FILE_PATH = "./keywords.json";
 const DEFAULT_KEYWORDS = [
   "racism",
@@ -30,40 +31,32 @@ const DEFAULT_KEYWORDS = [
   "intolerance",
   "anti-semitism",
 ];
+let keywords = [...DEFAULT_KEYWORDS];
 
 export const loadKeywords = (): void => {
-  if (fs.existsSync(KEYWORDS_FILE_PATH)) {
-    try {
+  try {
+    if (fs.existsSync(KEYWORDS_FILE_PATH)) {
       const data = fs.readFileSync(KEYWORDS_FILE_PATH, "utf8");
       keywords = JSON.parse(data);
       console.log("Keywords successfully loaded from file.");
-    } catch (error) {
-      console.error("Error loading keywords from file:", error);
-      keywords = [...KEYWORDS_FILE_PATH];
+    } else {
+      console.log("Default keywords are loaded.");
     }
-  } else {
-    keywords = [...KEYWORDS_FILE_PATH];
+  } catch (error) {
+    console.error("Error while loading keywords:", error);
   }
 };
 
-export const setKeywords = (newKeywords: string[]): void => {
-  keywords = [...newKeywords];
-  fs.writeFileSync("./keywords.json", JSON.stringify(newKeywords));
-  console.log("Keywords saved to file.");
-};
-
-export const initializeKeywords = (): void => {
-  loadKeywords();
-};
-
-// FIX UNTIL HERE
-
+// Text Analysis for Racism
 const analyzeTextForRacism = (text: string): boolean => {
+  if (!text) return false;
+
   const tokens = tokenizer.tokenize(text.toLowerCase()) || [];
-  console.log("Tokens:", tokens);
+  // Remove duplicate tokens
+  const uniqueTokens = [...new Set(tokens)];
+  console.log("Unique Tokens:", uniqueTokens);
 
-  const filteredTokens = removeStopwords(tokens, eng);
-
+  const filteredTokens = removeStopwords(uniqueTokens, eng);
   const containsRacismKeywords = filteredTokens.some((token) =>
     keywords.includes(token)
   );
@@ -74,6 +67,7 @@ const analyzeTextForRacism = (text: string): boolean => {
   return containsRacismKeywords && sentimentScore < 0;
 };
 
+// Analyzing Fetched Articles
 export const analyzeFetchedArticles = async (
   query: string,
   fromDate: string,
@@ -84,23 +78,32 @@ export const analyzeFetchedArticles = async (
 
     for (const article of articles) {
       const content = article.content || article.description || "";
-      if (!content) continue; // Skip articles without content (e.g. images)
+      if (!content) continue;
+
       const isRacist = analyzeTextForRacism(content);
       const tokens = tokenizer.tokenize(content.toLowerCase()) || [];
       const sentimentScore = isRacist ? analyzer.getSentiment(tokens) : 0;
-
       if (isRacist) {
         const { title, source, url, publishedAt } = article;
-        const newEvent = new Event({
-          title,
-          source: source.name,
-          url,
-          sentimentScore,
-          date: new Date(publishedAt),
-        });
 
-        await newEvent.save();
-        console.log(`Article titled "${article.title}" analyzed and saved.`);
+        const existingEvent = await Event.findOne({ url });
+        // If the event doesn't exist, save the new one
+        if (!existingEvent) {
+          const newEvent = new Event({
+            title,
+            source: source.name,
+            url,
+            sentimentScore, // Assuming sentimentScore is defined elsewhere in your code
+            date: new Date(publishedAt),
+          });
+
+          await newEvent.save();
+          console.log(`Article titled "${title}" analyzed and saved.`);
+        } else {
+          console.log(
+            `Article titled "${title}" already exists in the database.`
+          );
+        }
       }
     }
   } catch (error) {
