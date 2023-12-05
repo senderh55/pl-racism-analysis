@@ -1,0 +1,59 @@
+/* src/components/RacismList.module.css */
+.listContainer {
+  margin: 20px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  transition: 0.3s;
+}
+
+.listContainer:hover {
+  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.3);
+}
+
+.listContainer h1 {
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.listContainer ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.listContainer li {
+  margin-bottom: 15px;
+  font-size: 18px;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.3s;
+}
+
+.listContainer li:last-child {
+  border-bottom: none;
+}
+
+.listContainer li:hover {
+  background-color: #f0f0f0;
+}
+
+.listContainer a {
+  text-decoration: none;
+  color: #0275d8;
+  display: block;
+}
+
+.listContainer a:hover {
+  color: #0256b3;
+}
+
+.listContainer .date {
+  display: block;
+  color: #666;
+  font-size: 0.9em;
+  margin-top: 5px;
+}
